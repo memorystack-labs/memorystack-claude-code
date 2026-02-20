@@ -1,0 +1,31 @@
+{
+    "name": "memorystack-claude-code",
+    "owner": {
+        "name": "MemoryStack Labs",
+        "email": "support@memorystack.app"
+    },
+    "metadata": {
+        "description": "Official MemoryStack plugins for Claude Code",
+        "version": "0.2.0"
+    },
+    "plugins": [
+        {
+            "name": "memorystack-claude-code",
+            "source": "./plugin",
+            "description": "Persistent cognitive memory for Claude Code — importance scoring, hybrid search, auto-consolidation, temporal decay, and multi-agent scoping",
+            "version": "0.2.0",
+            "author": {
+                "name": "MemoryStack Labs",
+                "email": "support@memorystack.app"
+            },
+            "category": "memory",
+            "tags": [
+                "memory",
+                "persistence",
+                "context",
+                "cognitive",
+                "multi-agent"
+            ]
+        }
+    ]
+}
