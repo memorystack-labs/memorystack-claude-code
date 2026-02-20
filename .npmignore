@@ -1,0 +1,28 @@
+# Source files (built scripts are in plugin/scripts/)
+src/
+scripts/
+
+# Dev config
+biome.json
+.editorconfig
+
+# Dev/IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Dependencies (installed at build time)
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Artifacts and state
+.gemini/
+*.log

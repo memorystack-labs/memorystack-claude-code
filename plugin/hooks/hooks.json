@@ -1,0 +1,72 @@
+{
+    "description": "MemoryStack: Persistent memory for Claude Code",
+    "hooks": {
+        "SessionStart": [
+            {
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "node ${CLAUDE_PLUGIN_ROOT}/scripts/context-hook.cjs",
+                        "timeout": 30
+                    }
+                ]
+            }
+        ],
+        "UserPromptSubmit": [
+            {
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "node ${CLAUDE_PLUGIN_ROOT}/scripts/prompt-hook.cjs",
+                        "timeout": 5
+                    }
+                ]
+            }
+        ],
+        "PostToolUse": [
+            {
+                "matcher": "Edit|Write|Bash|Task|WebFetch|WebSearch",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "node ${CLAUDE_PLUGIN_ROOT}/scripts/tool-hook.cjs",
+                        "timeout": 5
+                    }
+                ]
+            }
+        ],
+        "SubagentStop": [
+            {
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "node ${CLAUDE_PLUGIN_ROOT}/scripts/subagent-hook.cjs",
+                        "timeout": 15
+                    }
+                ]
+            }
+        ],
+        "TaskCompleted": [
+            {
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "node ${CLAUDE_PLUGIN_ROOT}/scripts/task-hook.cjs",
+                        "timeout": 10
+                    }
+                ]
+            }
+        ],
+        "Stop": [
+            {
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "node ${CLAUDE_PLUGIN_ROOT}/scripts/summary-hook.cjs",
+                        "timeout": 30
+                    }
+                ]
+            }
+        ]
+    }
+}

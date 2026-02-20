@@ -1,0 +1,22 @@
+node_modules/
+plugin/scripts/*.cjs
+.DS_Store
+Thumbs.db
+*.log
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build artifacts
+dist/
+
+# Lock files are committed for reproducibility
+# package-lock.json
+
+# Gemini/Agent state
+.gemini/

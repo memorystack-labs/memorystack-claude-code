@@ -1,0 +1,9 @@
+{
+    "name": "memorystack-claude-code",
+    "version": "0.2.0",
+    "description": "Persistent cognitive memory for Claude Code — powered by MemoryStack",
+    "author": {
+        "name": "MemoryStack",
+        "email": "support@memorystack.app"
+    }
+}
