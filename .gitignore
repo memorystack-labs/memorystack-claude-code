@@ -1,5 +1,6 @@
 node_modules/
-plugin/scripts/*.cjs
+# NOTE: Do NOT gitignore plugin/scripts/*.cjs — those are the built
+# distribution files that Claude Code runs directly from the repo.
 .DS_Store
 Thumbs.db
 *.log
