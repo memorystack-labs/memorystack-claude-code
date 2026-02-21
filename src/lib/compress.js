@@ -14,43 +14,47 @@
 function compressObservation(toolName, input, output) {
     const name = (toolName || '').toLowerCase();
 
+    // Normalize output: Claude Code hook sends an object, not a string
+    // e.g. { output: '...', stdout: '...', stderr: '...' }
+    const outputStr = normalizeOutput(output);
+
     try {
         switch (name) {
             case 'edit':
             case 'editfile':
             case 'edit_file':
-                return compressEdit(input, output);
+                return compressEdit(input, outputStr);
 
             case 'write':
             case 'writefile':
             case 'write_to_file':
             case 'createfile':
-                return compressWrite(input, output);
+                return compressWrite(input, outputStr);
 
             case 'read':
             case 'readfile':
             case 'read_file':
             case 'view':
-                return compressRead(input, output);
+                return compressRead(input, outputStr);
 
             case 'bash':
             case 'terminal':
             case 'execute_command':
-                return compressBash(input, output);
+                return compressBash(input, outputStr);
 
             case 'glob':
             case 'search':
             case 'find':
             case 'list':
             case 'listdir':
-                return compressSearch(input, output);
+                return compressSearch(input, outputStr);
 
             case 'grep':
             case 'ripgrep':
-                return compressGrep(input, output);
+                return compressGrep(input, outputStr);
 
             default:
-                return compressGeneric(toolName, input, output);
+                return compressGeneric(toolName, input, outputStr);
         }
     } catch (err) {
         return `Used ${toolName || 'unknown tool'}`;
@@ -80,13 +84,16 @@ function compressRead(input, _output) {
 }
 
 function compressBash(input, output) {
-    const cmd = truncate(input?.command || input?.cmd || '', 60);
+    const cmd = truncate(input?.command || input?.cmd || input?.description || '', 60);
     const result = truncate(output || '', 60);
 
     if (cmd && result) {
         return `Ran: ${cmd} → ${result}`;
     }
-    return `Ran: ${cmd || 'command'}`;
+    if (cmd) {
+        return `Ran: ${cmd}`;
+    }
+    return `Ran bash command`;
 }
 
 function compressSearch(input, output) {
@@ -140,6 +147,26 @@ function truncate(text, maxLen) {
     const clean = text.replace(/\s+/g, ' ').trim();
     if (clean.length <= maxLen) return clean;
     return clean.slice(0, maxLen - 3) + '...';
+}
+
+/**
+ * Normalize tool output from Claude Code hook format to a plain string.
+ * Hook sends objects like { output: '...', stdout: '...' } instead of raw strings.
+ */
+function normalizeOutput(output) {
+    if (!output) return '';
+    if (typeof output === 'string') return output;
+    if (typeof output === 'object') {
+        // Try common response fields
+        if (output.output) return String(output.output);
+        if (output.stdout) return String(output.stdout);
+        if (output.result) return String(output.result);
+        if (output.content) return String(output.content);
+        if (output.success !== undefined) return output.success ? 'success' : 'failed';
+        // Last resort: stringify the object
+        try { return JSON.stringify(output).slice(0, 200); } catch { return ''; }
+    }
+    return String(output);
 }
 
 module.exports = { compressObservation, getObservationMetadata };
