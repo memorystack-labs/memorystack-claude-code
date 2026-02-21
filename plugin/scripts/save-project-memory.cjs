@@ -16005,41 +16005,95 @@ var require_memorystack_client = __commonJS({
     var crypto = require("crypto");
     var { execSync } = require("child_process");
     var DEFAULT_BASE_URL = "https://memorystack.app";
-    var PERSONAL_ENTITY_CONTEXT = `EXTRACT from this developer session:
-- Preferences: coding style, tool choices, workflow preferences
-- Learnings: new concepts learned, problems solved, debugging insights
-- Actions: what was built, refactored, or fixed
-- Decisions: personal choices about approach, tools, or patterns
+    var PERSONAL_ENTITY_CONTEXT = `EXTRACT from this developer session \u2014 focus on DURABLE knowledge:
+
+HIGH PRIORITY (always extract):
+- Decision rationale: WHY the developer chose a specific approach, tool, or pattern
+  Example: "Chose Zustand over Redux because this app has simple state with no middleware needs"
+- Debugging lessons: What broke, root cause, and how to prevent it next time
+  Example: "CORS error was caused by missing credentials:include \u2014 always set this for cookie-based auth"
+- Gotchas & warnings: Things that were unexpectedly tricky or have hidden requirements
+  Example: "React 19 breaks class components in server component trees \u2014 must use function components"
+- Workflow preferences: How this developer likes to work (not just tool names)
+  Example: "Prefers writing tests before implementation, uses TDD for API endpoints"
+
+MEDIUM PRIORITY:
+- Solutions to specific problems that could recur
+- Personal conventions that differ from defaults
 
 SKIP:
-- Generic AI explanations the developer didn't act on
+- Generic facts the developer didn't act on
 - Boilerplate code or standard operations
-- File contents or raw diffs (git tracks these)
-- Routine tool outputs`;
-    var PROJECT_ENTITY_CONTEXT = `EXTRACT from this project session:
-- Architecture: system design, module structure, data flow
-- Conventions: naming patterns, file organization, import style
-- Decisions: why specific tech/patterns were chosen over alternatives
-- Patterns: reusable approaches, error handling, auth flow
-- Setup: environment requirements, build steps, deploy process
-- Key files: where important logic lives and why
+- Raw file contents or diffs (git tracks these)
+- Routine tool outputs with no learning value`;
+    var PROJECT_ENTITY_CONTEXT = `EXTRACT from this project session \u2014 focus on INSTITUTIONAL knowledge:
+
+HIGH PRIORITY (always extract):
+- Architecture decisions WITH rationale:
+  Example: "PostgreSQL over MongoDB because the recommendation engine needs complex relational joins"
+- Known gotchas & workarounds:
+  Example: "The Redis cache must be cleared manually after staging deploy because CDN caches stale tokens for 15min"
+- System boundaries & data flow:
+  Example: "Auth tokens flow: mobile-app \u2192 api-gateway \u2192 user-service (JWT RS256, refresh via httpOnly cookies)"
+- Critical file map: Which files contain important logic and WHY
+  Example: "src/middleware/auth.ts is the single source of truth for JWT validation \u2014 all services import from here"
+
+MEDIUM PRIORITY:
+- Naming conventions, file organization patterns
+- Build/deploy requirements and gotchas
+- Integration points between services/modules
+- Testing patterns specific to this project
 
 SKIP:
-- Individual code changes (git tracks these)
-- Temporary debugging steps
-- Standard library usage
-- Generic best practices not specific to this project`;
+- Individual line-level code changes (git tracks these)
+- Temporary debugging that led nowhere
+- Standard library usage unless project-specific
+- Generic best practices not specific to THIS project`;
     var TASK_ENTITY_CONTEXT = `This is a structured task completion record.
-STORE as project knowledge with high confidence.
-EXTRACT: task goal, approach used, files modified, team context.
+STORE as project knowledge with HIGH confidence.
+
+EXTRACT ALL of these:
+- Task goal: what was the objective
+- Approach: HOW it was accomplished (not just "done")
+- Key files: which files were created or significantly modified
+- Blockers: any issues hit during execution and how they were resolved
+- Lessons: anything learned that would help someone doing similar work
+- Team context: who worked on it, what team
+
 Do NOT decompose \u2014 this is already in final form.`;
-    var SUBAGENT_ENTITY_CONTEXT = `This is a compressed subagent execution summary.
-STORE as project observation.
-EXTRACT: what the subagent accomplished, files touched, key findings.
+    var SUBAGENT_ENTITY_CONTEXT = `This is a subagent execution summary.
+STORE as project observation with MEDIUM-HIGH confidence.
+
+EXTRACT:
+- Key discoveries: what the subagent found that a developer would want to know
+- Architecture insights: module relationships, data flow, or patterns discovered
+- File importance: which files are critical entry points or contain core logic
+- Warnings: any problems, oddities, or tech debt the subagent noticed
+
 Do NOT decompose \u2014 this is already summarized.`;
-    var MANUAL_ENTITY_CONTEXT = `This is user-curated content explicitly saved.
-STORE with high importance \u2014 the user chose to save this deliberately.
-Preserve the content as-is with minimal processing.`;
+    var MANUAL_ENTITY_CONTEXT = `This is user-curated content EXPLICITLY saved by the developer.
+STORE with HIGHEST importance \u2014 the developer deliberately chose to preserve this.
+
+Preserve the content as-is with minimal processing.
+If it contains a decision, extract the rationale.
+If it contains a warning, mark it as a gotcha.
+This is the most valuable type of memory \u2014 treat it accordingly.`;
+    var SESSION_SUMMARY_CONTEXT = `EXTRACT from this session transcript \u2014 focus on LASTING value:
+
+HIGH PRIORITY:
+- Decisions made and WHY (architecture, tech choices, design patterns)
+- Problems solved: what broke, root cause, fix applied
+- Gotchas discovered: things that were harder than expected
+- Knowledge gained: new understanding about the codebase or tools
+
+MEDIUM PRIORITY:
+- Files that were central to the work  
+- Patterns established that future sessions should follow
+
+SKIP:
+- Play-by-play of what happened (too much noise)
+- Routine file reads or directory listings
+- Standard tool usage without learning value`;
     var MemoryStackClientWrapper2 = class {
       constructor(apiKey, options = {}) {
         if (!apiKey) {
@@ -16203,7 +16257,8 @@ Preserve the content as-is with minimal processing.`;
       PROJECT_ENTITY_CONTEXT,
       TASK_ENTITY_CONTEXT,
       SUBAGENT_ENTITY_CONTEXT,
-      MANUAL_ENTITY_CONTEXT
+      MANUAL_ENTITY_CONTEXT,
+      SESSION_SUMMARY_CONTEXT
     };
   }
 });

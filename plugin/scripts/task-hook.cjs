@@ -8850,11 +8850,11 @@ var require_mime_types = __commonJS({
       }
       return exts[0];
     }
-    function lookup(path) {
-      if (!path || typeof path !== "string") {
+    function lookup(path2) {
+      if (!path2 || typeof path2 !== "string") {
         return false;
       }
-      var extension2 = extname("x." + path).toLowerCase().substr(1);
+      var extension2 = extname("x." + path2).toLowerCase().substr(1);
       if (!extension2) {
         return false;
       }
@@ -9959,11 +9959,11 @@ var require_form_data = __commonJS({
     "use strict";
     var CombinedStream = require_combined_stream();
     var util = require("util");
-    var path = require("path");
+    var path2 = require("path");
     var http = require("http");
     var https = require("https");
     var parseUrl = require("url").parse;
-    var fs = require("fs");
+    var fs2 = require("fs");
     var Stream = require("stream").Stream;
     var crypto = require("crypto");
     var mime = require_mime_types();
@@ -10030,7 +10030,7 @@ var require_form_data = __commonJS({
         if (value.end != void 0 && value.end != Infinity && value.start != void 0) {
           callback(null, value.end + 1 - (value.start ? value.start : 0));
         } else {
-          fs.stat(value.path, function(err, stat) {
+          fs2.stat(value.path, function(err, stat) {
             if (err) {
               callback(err);
               return;
@@ -10087,11 +10087,11 @@ var require_form_data = __commonJS({
     FormData2.prototype._getContentDisposition = function(value, options) {
       var filename;
       if (typeof options.filepath === "string") {
-        filename = path.normalize(options.filepath).replace(/\\/g, "/");
+        filename = path2.normalize(options.filepath).replace(/\\/g, "/");
       } else if (options.filename || value && (value.name || value.path)) {
-        filename = path.basename(options.filename || value && (value.name || value.path));
+        filename = path2.basename(options.filename || value && (value.name || value.path));
       } else if (value && value.readable && hasOwn(value, "httpVersion")) {
-        filename = path.basename(value.client._httpMessage.path || "");
+        filename = path2.basename(value.client._httpMessage.path || "");
       }
       if (filename) {
         return 'filename="' + filename + '"';
@@ -12124,9 +12124,9 @@ var require_axios = __commonJS({
     function removeBrackets(key) {
       return utils$1.endsWith(key, "[]") ? key.slice(0, -2) : key;
     }
-    function renderKey(path, key, dots) {
-      if (!path) return key;
-      return path.concat(key).map(function each(token, i) {
+    function renderKey(path2, key, dots) {
+      if (!path2) return key;
+      return path2.concat(key).map(function each(token, i) {
         token = removeBrackets(token);
         return !dots && i ? "[" + token + "]" : token;
       }).join(dots ? "." : "");
@@ -12174,9 +12174,9 @@ var require_axios = __commonJS({
         }
         return value;
       }
-      function defaultVisitor(value, key, path) {
+      function defaultVisitor(value, key, path2) {
         let arr = value;
-        if (value && !path && typeof value === "object") {
+        if (value && !path2 && typeof value === "object") {
           if (utils$1.endsWith(key, "{}")) {
             key = metaTokens ? key : key.slice(0, -2);
             value = JSON.stringify(value);
@@ -12195,7 +12195,7 @@ var require_axios = __commonJS({
         if (isVisitable(value)) {
           return true;
         }
-        formData.append(renderKey(path, key, dots), convertValue(value));
+        formData.append(renderKey(path2, key, dots), convertValue(value));
         return false;
       }
       const stack = [];
@@ -12204,10 +12204,10 @@ var require_axios = __commonJS({
         convertValue,
         isVisitable
       });
-      function build(value, path) {
+      function build(value, path2) {
         if (utils$1.isUndefined(value)) return;
         if (stack.indexOf(value) !== -1) {
-          throw Error("Circular reference detected in " + path.join("."));
+          throw Error("Circular reference detected in " + path2.join("."));
         }
         stack.push(value);
         utils$1.forEach(value, function each(el, key) {
@@ -12215,11 +12215,11 @@ var require_axios = __commonJS({
             formData,
             el,
             utils$1.isString(key) ? key.trim() : key,
-            path,
+            path2,
             exposedHelpers
           );
           if (result === true) {
-            build(el, path ? path.concat(key) : [key]);
+            build(el, path2 ? path2.concat(key) : [key]);
           }
         });
         stack.pop();
@@ -12406,7 +12406,7 @@ var require_axios = __commonJS({
     };
     function toURLEncodedForm(data, options) {
       return toFormData(data, new platform.classes.URLSearchParams(), {
-        visitor: function(value, key, path, helpers) {
+        visitor: function(value, key, path2, helpers) {
           if (platform.isNode && utils$1.isBuffer(value)) {
             this.append(key, value.toString("base64"));
             return false;
@@ -12434,11 +12434,11 @@ var require_axios = __commonJS({
       return obj;
     }
     function formDataToJSON(formData) {
-      function buildPath(path, value, target, index) {
-        let name = path[index++];
+      function buildPath(path2, value, target, index) {
+        let name = path2[index++];
         if (name === "__proto__") return true;
         const isNumericKey = Number.isFinite(+name);
-        const isLast = index >= path.length;
+        const isLast = index >= path2.length;
         name = !name && utils$1.isArray(target) ? target.length : name;
         if (isLast) {
           if (utils$1.hasOwnProp(target, name)) {
@@ -12451,7 +12451,7 @@ var require_axios = __commonJS({
         if (!target[name] || !utils$1.isObject(target[name])) {
           target[name] = [];
         }
-        const result = buildPath(path, value, target[name], index);
+        const result = buildPath(path2, value, target[name], index);
         if (result && utils$1.isArray(target[name])) {
           target[name] = arrayToObject(target[name]);
         }
@@ -13715,9 +13715,9 @@ var require_axios = __commonJS({
           auth = urlUsername + ":" + urlPassword;
         }
         auth && headers.delete("authorization");
-        let path;
+        let path2;
         try {
-          path = buildURL(
+          path2 = buildURL(
             parsed.pathname + parsed.search,
             config.params,
             config.paramsSerializer
@@ -13735,7 +13735,7 @@ var require_axios = __commonJS({
           false
         );
         const options = {
-          path,
+          path: path2,
           method,
           headers: headers.toJSON(),
           agents: { http: config.httpAgent, https: config.httpsAgent },
@@ -13967,14 +13967,14 @@ var require_axios = __commonJS({
     var cookies = platform.hasStandardBrowserEnv ? (
       // Standard browser envs support document.cookie
       {
-        write(name, value, expires, path, domain, secure, sameSite) {
+        write(name, value, expires, path2, domain, secure, sameSite) {
           if (typeof document === "undefined") return;
           const cookie = [`${name}=${encodeURIComponent(value)}`];
           if (utils$1.isNumber(expires)) {
             cookie.push(`expires=${new Date(expires).toUTCString()}`);
           }
-          if (utils$1.isString(path)) {
-            cookie.push(`path=${path}`);
+          if (utils$1.isString(path2)) {
+            cookie.push(`path=${path2}`);
           }
           if (utils$1.isString(domain)) {
             cookie.push(`domain=${domain}`);
@@ -16005,41 +16005,95 @@ var require_memorystack_client = __commonJS({
     var crypto = require("crypto");
     var { execSync } = require("child_process");
     var DEFAULT_BASE_URL = "https://memorystack.app";
-    var PERSONAL_ENTITY_CONTEXT = `EXTRACT from this developer session:
-- Preferences: coding style, tool choices, workflow preferences
-- Learnings: new concepts learned, problems solved, debugging insights
-- Actions: what was built, refactored, or fixed
-- Decisions: personal choices about approach, tools, or patterns
+    var PERSONAL_ENTITY_CONTEXT = `EXTRACT from this developer session \u2014 focus on DURABLE knowledge:
+
+HIGH PRIORITY (always extract):
+- Decision rationale: WHY the developer chose a specific approach, tool, or pattern
+  Example: "Chose Zustand over Redux because this app has simple state with no middleware needs"
+- Debugging lessons: What broke, root cause, and how to prevent it next time
+  Example: "CORS error was caused by missing credentials:include \u2014 always set this for cookie-based auth"
+- Gotchas & warnings: Things that were unexpectedly tricky or have hidden requirements
+  Example: "React 19 breaks class components in server component trees \u2014 must use function components"
+- Workflow preferences: How this developer likes to work (not just tool names)
+  Example: "Prefers writing tests before implementation, uses TDD for API endpoints"
+
+MEDIUM PRIORITY:
+- Solutions to specific problems that could recur
+- Personal conventions that differ from defaults
 
 SKIP:
-- Generic AI explanations the developer didn't act on
+- Generic facts the developer didn't act on
 - Boilerplate code or standard operations
-- File contents or raw diffs (git tracks these)
-- Routine tool outputs`;
-    var PROJECT_ENTITY_CONTEXT = `EXTRACT from this project session:
-- Architecture: system design, module structure, data flow
-- Conventions: naming patterns, file organization, import style
-- Decisions: why specific tech/patterns were chosen over alternatives
-- Patterns: reusable approaches, error handling, auth flow
-- Setup: environment requirements, build steps, deploy process
-- Key files: where important logic lives and why
+- Raw file contents or diffs (git tracks these)
+- Routine tool outputs with no learning value`;
+    var PROJECT_ENTITY_CONTEXT = `EXTRACT from this project session \u2014 focus on INSTITUTIONAL knowledge:
+
+HIGH PRIORITY (always extract):
+- Architecture decisions WITH rationale:
+  Example: "PostgreSQL over MongoDB because the recommendation engine needs complex relational joins"
+- Known gotchas & workarounds:
+  Example: "The Redis cache must be cleared manually after staging deploy because CDN caches stale tokens for 15min"
+- System boundaries & data flow:
+  Example: "Auth tokens flow: mobile-app \u2192 api-gateway \u2192 user-service (JWT RS256, refresh via httpOnly cookies)"
+- Critical file map: Which files contain important logic and WHY
+  Example: "src/middleware/auth.ts is the single source of truth for JWT validation \u2014 all services import from here"
+
+MEDIUM PRIORITY:
+- Naming conventions, file organization patterns
+- Build/deploy requirements and gotchas
+- Integration points between services/modules
+- Testing patterns specific to this project
 
 SKIP:
-- Individual code changes (git tracks these)
-- Temporary debugging steps
-- Standard library usage
-- Generic best practices not specific to this project`;
+- Individual line-level code changes (git tracks these)
+- Temporary debugging that led nowhere
+- Standard library usage unless project-specific
+- Generic best practices not specific to THIS project`;
     var TASK_ENTITY_CONTEXT2 = `This is a structured task completion record.
-STORE as project knowledge with high confidence.
-EXTRACT: task goal, approach used, files modified, team context.
+STORE as project knowledge with HIGH confidence.
+
+EXTRACT ALL of these:
+- Task goal: what was the objective
+- Approach: HOW it was accomplished (not just "done")
+- Key files: which files were created or significantly modified
+- Blockers: any issues hit during execution and how they were resolved
+- Lessons: anything learned that would help someone doing similar work
+- Team context: who worked on it, what team
+
 Do NOT decompose \u2014 this is already in final form.`;
-    var SUBAGENT_ENTITY_CONTEXT = `This is a compressed subagent execution summary.
-STORE as project observation.
-EXTRACT: what the subagent accomplished, files touched, key findings.
+    var SUBAGENT_ENTITY_CONTEXT = `This is a subagent execution summary.
+STORE as project observation with MEDIUM-HIGH confidence.
+
+EXTRACT:
+- Key discoveries: what the subagent found that a developer would want to know
+- Architecture insights: module relationships, data flow, or patterns discovered
+- File importance: which files are critical entry points or contain core logic
+- Warnings: any problems, oddities, or tech debt the subagent noticed
+
 Do NOT decompose \u2014 this is already summarized.`;
-    var MANUAL_ENTITY_CONTEXT = `This is user-curated content explicitly saved.
-STORE with high importance \u2014 the user chose to save this deliberately.
-Preserve the content as-is with minimal processing.`;
+    var MANUAL_ENTITY_CONTEXT = `This is user-curated content EXPLICITLY saved by the developer.
+STORE with HIGHEST importance \u2014 the developer deliberately chose to preserve this.
+
+Preserve the content as-is with minimal processing.
+If it contains a decision, extract the rationale.
+If it contains a warning, mark it as a gotcha.
+This is the most valuable type of memory \u2014 treat it accordingly.`;
+    var SESSION_SUMMARY_CONTEXT = `EXTRACT from this session transcript \u2014 focus on LASTING value:
+
+HIGH PRIORITY:
+- Decisions made and WHY (architecture, tech choices, design patterns)
+- Problems solved: what broke, root cause, fix applied
+- Gotchas discovered: things that were harder than expected
+- Knowledge gained: new understanding about the codebase or tools
+
+MEDIUM PRIORITY:
+- Files that were central to the work  
+- Patterns established that future sessions should follow
+
+SKIP:
+- Play-by-play of what happened (too much noise)
+- Routine file reads or directory listings
+- Standard tool usage without learning value`;
     var MemoryStackClientWrapper2 = class {
       constructor(apiKey, options = {}) {
         if (!apiKey) {
@@ -16203,7 +16257,8 @@ Preserve the content as-is with minimal processing.`;
       PROJECT_ENTITY_CONTEXT,
       TASK_ENTITY_CONTEXT: TASK_ENTITY_CONTEXT2,
       SUBAGENT_ENTITY_CONTEXT,
-      MANUAL_ENTITY_CONTEXT
+      MANUAL_ENTITY_CONTEXT,
+      SESSION_SUMMARY_CONTEXT
     };
   }
 });
@@ -16211,12 +16266,12 @@ Preserve the content as-is with minimal processing.`;
 // src/lib/settings.js
 var require_settings = __commonJS({
   "src/lib/settings.js"(exports2, module2) {
-    var fs = require("fs");
-    var path = require("path");
+    var fs2 = require("fs");
+    var path2 = require("path");
     var os = require("os");
-    var CONFIG_DIR = path.join(os.homedir(), ".memorystack-claude");
-    var SETTINGS_FILE = path.join(CONFIG_DIR, "settings.json");
-    var CREDENTIALS_FILE = path.join(CONFIG_DIR, "credentials.json");
+    var CONFIG_DIR = path2.join(os.homedir(), ".memorystack-claude");
+    var SETTINGS_FILE = path2.join(CONFIG_DIR, "settings.json");
+    var CREDENTIALS_FILE = path2.join(CONFIG_DIR, "credentials.json");
     function loadSettings2() {
       const defaults = {
         skipTools: ["Read", "Glob", "Grep"],
@@ -16248,8 +16303,8 @@ var require_settings = __commonJS({
         // 'smart' (signal → full fallback), 'signal', 'full'
       };
       try {
-        if (fs.existsSync(SETTINGS_FILE)) {
-          const content = fs.readFileSync(SETTINGS_FILE, "utf8");
+        if (fs2.existsSync(SETTINGS_FILE)) {
+          const content = fs2.readFileSync(SETTINGS_FILE, "utf8");
           return { ...defaults, ...JSON.parse(content) };
         }
       } catch (err) {
@@ -16262,8 +16317,8 @@ var require_settings = __commonJS({
         return envKey;
       }
       try {
-        if (fs.existsSync(CREDENTIALS_FILE)) {
-          const content = fs.readFileSync(CREDENTIALS_FILE, "utf8");
+        if (fs2.existsSync(CREDENTIALS_FILE)) {
+          const content = fs2.readFileSync(CREDENTIALS_FILE, "utf8");
           const creds = JSON.parse(content);
           if (creds.apiKey) {
             return creds.apiKey;
@@ -16275,10 +16330,10 @@ var require_settings = __commonJS({
     }
     function saveApiKey(apiKey) {
       try {
-        if (!fs.existsSync(CONFIG_DIR)) {
-          fs.mkdirSync(CONFIG_DIR, { recursive: true });
+        if (!fs2.existsSync(CONFIG_DIR)) {
+          fs2.mkdirSync(CONFIG_DIR, { recursive: true });
         }
-        fs.writeFileSync(
+        fs2.writeFileSync(
           CREDENTIALS_FILE,
           JSON.stringify({ apiKey, savedAt: (/* @__PURE__ */ new Date()).toISOString() }, null, 2)
         );
@@ -16295,14 +16350,14 @@ var require_settings = __commonJS({
     }
     function getProjectName2(cwd) {
       try {
-        const pkgPath = path.join(cwd, "package.json");
-        if (fs.existsSync(pkgPath)) {
-          const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
+        const pkgPath = path2.join(cwd, "package.json");
+        if (fs2.existsSync(pkgPath)) {
+          const pkg = JSON.parse(fs2.readFileSync(pkgPath, "utf8"));
           if (pkg.name) return pkg.name;
         }
       } catch (err) {
       }
-      return path.basename(cwd);
+      return path2.basename(cwd);
     }
     module2.exports = {
       loadSettings: loadSettings2,
@@ -16355,9 +16410,15 @@ var require_stdin = __commonJS({
 });
 
 // src/task-hook.js
+var fs = require("fs");
+var path = require("path");
 var { MemoryStackClientWrapper, TASK_ENTITY_CONTEXT } = require_memorystack_client();
 var { loadSettings, getApiKey, getProjectName, debugLog } = require_settings();
 var { readStdin, writeOutput } = require_stdin();
+var STATE_DIR = path.join(
+  process.env.HOME || process.env.USERPROFILE || "",
+  ".memorystack-claude"
+);
 async function main() {
   const settings = loadSettings();
   try {
@@ -16384,6 +16445,14 @@ async function main() {
     }
     const parts = [`[Task Completed] ${taskSubject}`];
     if (taskDescription) parts.push(`Description: ${taskDescription}`);
+    const filesChanged = getSessionFiles(sessionId);
+    if (filesChanged.length > 0) {
+      parts.push(`Files modified: ${filesChanged.join(", ")}`);
+    }
+    const keyActivity = getSessionHighlights(sessionId);
+    if (keyActivity.length > 0) {
+      parts.push(`Approach: ${keyActivity.join("; ")}`);
+    }
     if (teammateName) parts.push(`Completed by: ${teammateName}`);
     if (teamName) parts.push(`Team: ${teamName}`);
     parts.push(`Date: ${(/* @__PURE__ */ new Date()).toISOString().split("T")[0]}`);
@@ -16406,6 +16475,37 @@ async function main() {
   } catch (err) {
     debugLog(settings, "Task hook error", { error: err.message });
     writeOutput({});
+  }
+}
+function getSessionFiles(sessionId) {
+  try {
+    const changesFile = path.join(STATE_DIR, `changes-${sessionId}.json`);
+    if (!fs.existsSync(changesFile)) return [];
+    const data = JSON.parse(fs.readFileSync(changesFile, "utf8"));
+    return Object.keys(data).slice(0, 15);
+  } catch {
+    return [];
+  }
+}
+function getSessionHighlights(sessionId) {
+  try {
+    const activityFile = path.join(STATE_DIR, `activity-${sessionId}.jsonl`);
+    if (!fs.existsSync(activityFile)) return [];
+    const lines = fs.readFileSync(activityFile, "utf8").trim().split("\n");
+    const highlights = [];
+    for (const line of lines) {
+      try {
+        const entry = JSON.parse(line);
+        const summary = entry.summary || "";
+        if (summary && !summary.startsWith("Read ") && !summary.startsWith("Listed ")) {
+          highlights.push(summary);
+        }
+      } catch {
+      }
+    }
+    return highlights.slice(-8);
+  } catch {
+    return [];
   }
 }
 main().catch(() => process.exit(0));

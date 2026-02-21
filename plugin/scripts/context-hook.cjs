@@ -16005,41 +16005,95 @@ var require_memorystack_client = __commonJS({
     var crypto = require("crypto");
     var { execSync } = require("child_process");
     var DEFAULT_BASE_URL = "https://memorystack.app";
-    var PERSONAL_ENTITY_CONTEXT = `EXTRACT from this developer session:
-- Preferences: coding style, tool choices, workflow preferences
-- Learnings: new concepts learned, problems solved, debugging insights
-- Actions: what was built, refactored, or fixed
-- Decisions: personal choices about approach, tools, or patterns
+    var PERSONAL_ENTITY_CONTEXT = `EXTRACT from this developer session \u2014 focus on DURABLE knowledge:
+
+HIGH PRIORITY (always extract):
+- Decision rationale: WHY the developer chose a specific approach, tool, or pattern
+  Example: "Chose Zustand over Redux because this app has simple state with no middleware needs"
+- Debugging lessons: What broke, root cause, and how to prevent it next time
+  Example: "CORS error was caused by missing credentials:include \u2014 always set this for cookie-based auth"
+- Gotchas & warnings: Things that were unexpectedly tricky or have hidden requirements
+  Example: "React 19 breaks class components in server component trees \u2014 must use function components"
+- Workflow preferences: How this developer likes to work (not just tool names)
+  Example: "Prefers writing tests before implementation, uses TDD for API endpoints"
+
+MEDIUM PRIORITY:
+- Solutions to specific problems that could recur
+- Personal conventions that differ from defaults
 
 SKIP:
-- Generic AI explanations the developer didn't act on
+- Generic facts the developer didn't act on
 - Boilerplate code or standard operations
-- File contents or raw diffs (git tracks these)
-- Routine tool outputs`;
-    var PROJECT_ENTITY_CONTEXT = `EXTRACT from this project session:
-- Architecture: system design, module structure, data flow
-- Conventions: naming patterns, file organization, import style
-- Decisions: why specific tech/patterns were chosen over alternatives
-- Patterns: reusable approaches, error handling, auth flow
-- Setup: environment requirements, build steps, deploy process
-- Key files: where important logic lives and why
+- Raw file contents or diffs (git tracks these)
+- Routine tool outputs with no learning value`;
+    var PROJECT_ENTITY_CONTEXT = `EXTRACT from this project session \u2014 focus on INSTITUTIONAL knowledge:
+
+HIGH PRIORITY (always extract):
+- Architecture decisions WITH rationale:
+  Example: "PostgreSQL over MongoDB because the recommendation engine needs complex relational joins"
+- Known gotchas & workarounds:
+  Example: "The Redis cache must be cleared manually after staging deploy because CDN caches stale tokens for 15min"
+- System boundaries & data flow:
+  Example: "Auth tokens flow: mobile-app \u2192 api-gateway \u2192 user-service (JWT RS256, refresh via httpOnly cookies)"
+- Critical file map: Which files contain important logic and WHY
+  Example: "src/middleware/auth.ts is the single source of truth for JWT validation \u2014 all services import from here"
+
+MEDIUM PRIORITY:
+- Naming conventions, file organization patterns
+- Build/deploy requirements and gotchas
+- Integration points between services/modules
+- Testing patterns specific to this project
 
 SKIP:
-- Individual code changes (git tracks these)
-- Temporary debugging steps
-- Standard library usage
-- Generic best practices not specific to this project`;
+- Individual line-level code changes (git tracks these)
+- Temporary debugging that led nowhere
+- Standard library usage unless project-specific
+- Generic best practices not specific to THIS project`;
     var TASK_ENTITY_CONTEXT = `This is a structured task completion record.
-STORE as project knowledge with high confidence.
-EXTRACT: task goal, approach used, files modified, team context.
+STORE as project knowledge with HIGH confidence.
+
+EXTRACT ALL of these:
+- Task goal: what was the objective
+- Approach: HOW it was accomplished (not just "done")
+- Key files: which files were created or significantly modified
+- Blockers: any issues hit during execution and how they were resolved
+- Lessons: anything learned that would help someone doing similar work
+- Team context: who worked on it, what team
+
 Do NOT decompose \u2014 this is already in final form.`;
-    var SUBAGENT_ENTITY_CONTEXT = `This is a compressed subagent execution summary.
-STORE as project observation.
-EXTRACT: what the subagent accomplished, files touched, key findings.
+    var SUBAGENT_ENTITY_CONTEXT = `This is a subagent execution summary.
+STORE as project observation with MEDIUM-HIGH confidence.
+
+EXTRACT:
+- Key discoveries: what the subagent found that a developer would want to know
+- Architecture insights: module relationships, data flow, or patterns discovered
+- File importance: which files are critical entry points or contain core logic
+- Warnings: any problems, oddities, or tech debt the subagent noticed
+
 Do NOT decompose \u2014 this is already summarized.`;
-    var MANUAL_ENTITY_CONTEXT = `This is user-curated content explicitly saved.
-STORE with high importance \u2014 the user chose to save this deliberately.
-Preserve the content as-is with minimal processing.`;
+    var MANUAL_ENTITY_CONTEXT = `This is user-curated content EXPLICITLY saved by the developer.
+STORE with HIGHEST importance \u2014 the developer deliberately chose to preserve this.
+
+Preserve the content as-is with minimal processing.
+If it contains a decision, extract the rationale.
+If it contains a warning, mark it as a gotcha.
+This is the most valuable type of memory \u2014 treat it accordingly.`;
+    var SESSION_SUMMARY_CONTEXT = `EXTRACT from this session transcript \u2014 focus on LASTING value:
+
+HIGH PRIORITY:
+- Decisions made and WHY (architecture, tech choices, design patterns)
+- Problems solved: what broke, root cause, fix applied
+- Gotchas discovered: things that were harder than expected
+- Knowledge gained: new understanding about the codebase or tools
+
+MEDIUM PRIORITY:
+- Files that were central to the work  
+- Patterns established that future sessions should follow
+
+SKIP:
+- Play-by-play of what happened (too much noise)
+- Routine file reads or directory listings
+- Standard tool usage without learning value`;
     var MemoryStackClientWrapper2 = class {
       constructor(apiKey, options = {}) {
         if (!apiKey) {
@@ -16203,7 +16257,8 @@ Preserve the content as-is with minimal processing.`;
       PROJECT_ENTITY_CONTEXT,
       TASK_ENTITY_CONTEXT,
       SUBAGENT_ENTITY_CONTEXT,
-      MANUAL_ENTITY_CONTEXT
+      MANUAL_ENTITY_CONTEXT,
+      SESSION_SUMMARY_CONTEXT
     };
   }
 });
@@ -16412,40 +16467,105 @@ var require_auth = __commonJS({
 // src/lib/format-context.js
 var require_format_context = __commonJS({
   "src/lib/format-context.js"(exports2, module2) {
+    function classifyMemory(memory) {
+      const content = (memory.content || "").toLowerCase();
+      const type = (memory.memoryType || memory.memory_type || "").toLowerCase();
+      if (type === "task-completion" || content.includes("[task completed]")) {
+        return "work";
+      }
+      if (type === "subagent-result" || content.includes("[subagent:")) {
+        return "discovery";
+      }
+      if (content.includes("decision") || content.includes("chose") || content.includes("instead of") || content.includes("over ") || content.includes("because") || content.includes("rationale") || content.includes("architecture") || content.includes("design") || content.includes("data flow") || content.includes("system boundary")) {
+        return "decision";
+      }
+      if (content.includes("gotcha") || content.includes("watch out") || content.includes("careful") || content.includes("workaround") || content.includes("bug") || content.includes("breaks") || content.includes("tricky") || content.includes("caveat") || content.includes("must ") || content.includes("always ") || content.includes("never ") || content.includes("warning")) {
+        return "warning";
+      }
+      if (content.includes("convention") || content.includes("pattern") || content.includes("prefers") || content.includes("uses ") || content.includes("style") || content.includes("format") || content.includes("eslint") || content.includes("prettier") || content.includes("typescript") || content.includes("framework")) {
+        return "convention";
+      }
+      return "knowledge";
+    }
     function formatProfileContext2(profile) {
-      const sections = [];
+      const allMemories = [];
       if (profile.personal?.length > 0) {
-        const items = profile.personal.map(
-          (m) => `- ${m.content}${m.memoryType ? ` [${m.memoryType}]` : ""}`
-        );
-        sections.push(`## Developer Profile
-${items.join("\n")}`);
+        profile.personal.forEach((m) => allMemories.push({ ...m, source: "personal" }));
       }
       if (profile.project?.length > 0) {
-        const items = profile.project.map(
-          (m) => `- ${m.content}${m.memoryType ? ` [${m.memoryType}]` : ""}`
-        );
-        sections.push(`## Project Knowledge
+        profile.project.forEach((m) => allMemories.push({ ...m, source: "project" }));
+      }
+      const categories = {
+        decision: [],
+        warning: [],
+        convention: [],
+        discovery: [],
+        work: [],
+        knowledge: []
+      };
+      for (const m of allMemories) {
+        const cat = classifyMemory(m);
+        categories[cat].push(m);
+      }
+      const sections = [];
+      if (categories.decision.length > 0) {
+        const items = categories.decision.map((m) => `- ${m.content}`);
+        sections.push(`## \u{1F3D7}\uFE0F Architecture & Decisions
 ${items.join("\n")}`);
+      }
+      if (categories.warning.length > 0) {
+        const items = categories.warning.map((m) => `- ${m.content}`);
+        sections.push(`## \u26A0\uFE0F Warnings & Gotchas
+${items.join("\n")}`);
+      }
+      if (categories.convention.length > 0) {
+        const items = categories.convention.map((m) => `- ${m.content}`);
+        sections.push(`## \u{1F527} Conventions & Patterns
+${items.join("\n")}`);
+      }
+      if (categories.discovery.length > 0) {
+        const items = categories.discovery.map((m) => `- ${m.content}`);
+        sections.push(`## \u{1F50D} Discoveries
+${items.join("\n")}`);
+      }
+      if (categories.work.length > 0) {
+        const items = categories.work.map((m) => `- ${m.content}`);
+        sections.push(`## \u{1F4CB} Recent Work
+${items.join("\n")}`);
+      }
+      if (categories.knowledge.length > 0) {
+        const items = categories.knowledge.map((m) => `- ${m.content}`);
+        sections.push(`## \u{1F4DD} Project Knowledge
+${items.join("\n")}`);
+      }
+      if (profile.personal?.length > 0) {
+        const personalOnly = profile.personal.filter(
+          (m) => classifyMemory(m) === "convention" || classifyMemory(m) === "knowledge"
+        );
+        if (personalOnly.length > 0) {
+          const items = personalOnly.map((m) => `- ${m.content}`);
+          sections.push(`## \u{1F464} Developer Preferences
+${items.join("\n")}`);
+        }
       }
       if (profile.recent?.length > 0) {
         const items = profile.recent.map((m) => {
           const ago = formatRelativeTime(m.createdAt);
           return `- ${m.content}${ago ? ` (${ago})` : ""}`;
         });
-        sections.push(`## Recent Activity
+        sections.push(`## \u{1F550} Recent Activity
 ${items.join("\n")}`);
       }
       if (sections.length === 0) {
         return formatEmptyContext2();
       }
       return `<memorystack-context>
-The following is recalled context about the developer and this project.
-Reference it naturally when relevant \u2014 don't force it.
+Here is what MemoryStack remembers about you and this project.
+Use this to make informed decisions \u2014 especially the Decisions and Warnings sections.
 
 ${sections.join("\n\n")}
 
-Use these memories to inform your responses. Don't repeat them verbatim.
+Reference these memories naturally when relevant. Pay special attention to \u26A0\uFE0F warnings.
 </memorystack-context>`;
     }
     function formatContext(memories, showConfidence = false) {
@@ -16460,13 +16580,11 @@ Use these memories to inform your responses. Don't repeat them verbatim.
         return line;
       });
       return `<memorystack-context>
-The following is recalled context about the user and previous sessions.
-Reference it only when relevant to the conversation.
+Relevant memories from MemoryStack:
 
-## Relevant Memories
 ${lines.join("\n")}
 
-Use these memories naturally when relevant but don't force them into every response.
+Use these memories naturally when relevant.
 </memorystack-context>`;
     }
     function formatRelativeTime(dateStr) {
@@ -16490,7 +16608,7 @@ Use these memories naturally when relevant but don't force them into every respo
     function formatEmptyContext2() {
       return `<memorystack-context>
 No previous memories found for this project.
-Memories will be saved automatically as you work.
+Memories will be saved automatically as you work \u2014 decisions, discoveries, and lessons learned.
 </memorystack-context>`;
     }
     function formatErrorContext2(errorMessage) {
@@ -16512,7 +16630,8 @@ https://memorystack.app/dashboard/api-keys
       formatRelativeTime,
       formatEmptyContext: formatEmptyContext2,
       formatErrorContext: formatErrorContext2,
-      formatAuthRequired: formatAuthRequired2
+      formatAuthRequired: formatAuthRequired2,
+      classifyMemory
     };
   }
 });

@@ -20,12 +20,17 @@ const SAVE_SIGNALS = [
     'remember this', 'save this', 'note this', 'store this',
     'remember that', 'save that', 'keep this in mind',
     'important:', 'decision:', 'convention:',
+    // Gotcha / lesson signals (high-value knowledge)
+    'watch out', 'careful with', 'gotcha', 'workaround',
+    'tricky part', 'the trick is', 'learned that', 'figured out',
+    'turns out', 'the fix was', 'root cause', 'never do',
 ];
 
 const SEARCH_SIGNALS = [
     'what did i', 'what have i', 'last time', 'previously',
     'how did we', 'remind me', 'do you remember', 'recall',
     'search memory', 'search memories', 'look up',
+    'have we seen', 'any experience with', 'dealt with',
 ];
 
 async function main() {
@@ -144,10 +149,19 @@ function flagTurnForCapture(cwd, sessionId, prompt) {
  */
 function shouldEnrichPrompt(promptLower) {
     const enrichPatterns = [
-        /\b(yesterday|last week|last session|earlier|before)\b/,
-        /\b(architecture|pattern|decision|convention|approach)\b/,
+        // Temporal references (past work)
+        /\b(yesterday|last week|last session|earlier|before|previously)\b/,
+        // Architecture & design
+        /\b(architecture|pattern|decision|convention|approach|design)\b/,
+        // Questions about past actions
         /\bhow (do|did|should) (we|i|you)\b/,
         /\bwhy (do|did|is|was|were)\b/,
+        // Debugging sessions — search for past solutions
+        /\b(error|broken|crash|doesn't work|not working|failed|bug)\b/,
+        // Setup & configuration — search for past setup knowledge
+        /\b(setup|install|configure|deploy|environment|migration)\b/,
+        // Understanding codebase
+        /\b(how does .+ work|what does .+ do|where is .+ defined)\b/,
     ];
     return enrichPatterns.some(p => p.test(promptLower));
 }

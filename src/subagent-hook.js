@@ -114,12 +114,13 @@ function readSubagentTranscript(transcriptPath) {
 }
 
 /**
- * Build a focused summary of what the subagent accomplished
+ * Build a rich summary of what the subagent discovered
+ * Extracts: key findings, architecture insights, file importance, warnings
  */
 function buildSubagentSummary(agentType, agentId, entries) {
-    const parts = [`[Subagent:${agentType}] (${agentId})`];
+    const parts = [`[Subagent:${agentType}]`];
 
-    // Extract assistant messages (the subagent's responses)
+    // Extract assistant messages (the subagent's analysis)
     const assistantMessages = entries
         .filter(e => e.role === 'assistant' && e.content)
         .map(e => {
@@ -134,27 +135,63 @@ function buildSubagentSummary(agentType, agentId, entries) {
         })
         .filter(Boolean);
 
-    // Extract tool uses (what files/commands were touched)
+    // Extract files explored (for file importance map)
+    const filesExplored = new Set();
     const toolUses = entries
         .filter(e => e.role === 'assistant' && Array.isArray(e.content))
-        .flatMap(e => e.content.filter(c => c.type === 'tool_use'))
-        .map(t => {
-            const name = t.name || 'unknown';
-            const file = t.input?.file_path || t.input?.path || '';
-            const cmd = t.input?.command || '';
-            if (file) return `${name}: ${path.basename(file)}`;
-            if (cmd) return `${name}: ${cmd.slice(0, 60)}`;
-            return name;
-        });
+        .flatMap(e => e.content.filter(c => c.type === 'tool_use'));
 
-    if (toolUses.length > 0) {
-        parts.push(`Actions: ${toolUses.slice(0, 10).join(', ')}`);
+    for (const t of toolUses) {
+        const file = t.input?.file_path || t.input?.path || '';
+        if (file) filesExplored.add(path.basename(file));
     }
 
-    // Get the last assistant message as the conclusion
+    // Scan assistant messages for key patterns
+    const allText = assistantMessages.join(' ');
+    const findings = [];
+    const warnings = [];
+
+    // Extract sentences containing decision/architecture keywords
+    const sentences = allText.split(/[.!?\n]+/).map(s => s.trim()).filter(s => s.length > 20);
+    for (const sentence of sentences) {
+        const lower = sentence.toLowerCase();
+        if (
+            lower.includes('architecture') || lower.includes('pattern') ||
+            lower.includes('depends on') || lower.includes('imports from') ||
+            lower.includes('entry point') || lower.includes('main ') ||
+            lower.includes('core ') || lower.includes('critical')
+        ) {
+            findings.push(sentence.slice(0, 150));
+        }
+        if (
+            lower.includes('warning') || lower.includes('issue') ||
+            lower.includes('problem') || lower.includes('deprecated') ||
+            lower.includes('tech debt') || lower.includes('todo') ||
+            lower.includes('broken') || lower.includes('missing')
+        ) {
+            warnings.push(sentence.slice(0, 150));
+        }
+    }
+
+    // Key discoveries
+    if (findings.length > 0) {
+        parts.push(`Key findings: ${findings.slice(0, 5).join('; ')}`);
+    }
+
+    // Files explored
+    if (filesExplored.size > 0) {
+        parts.push(`Files explored: ${[...filesExplored].slice(0, 12).join(', ')}`);
+    }
+
+    // Warnings found
+    if (warnings.length > 0) {
+        parts.push(`⚠️ Noted: ${warnings.slice(0, 3).join('; ')}`);
+    }
+
+    // Final conclusion (last assistant message)
     if (assistantMessages.length > 0) {
         const lastMsg = assistantMessages[assistantMessages.length - 1];
-        parts.push(`Result: ${lastMsg.slice(0, 500)}`);
+        parts.push(`Conclusion: ${lastMsg.slice(0, 400)}`);
     }
 
     const summary = parts.join('\n');
