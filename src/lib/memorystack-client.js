@@ -122,6 +122,7 @@ class MemoryStackClientWrapper {
             memoryType,
             sourceVersion,
             extractionContext,
+            metadata: extraMetadata,
         } = opts;
 
         const metadata = {
@@ -130,6 +131,8 @@ class MemoryStackClientWrapper {
             project: this.projectName,
             timestamp: new Date().toISOString(),
             scope_id: scope === 'project' ? this.getProjectScopeId() : this.getPersonalScopeId(),
+            // Merge extra metadata (agent_id, agent_type, task_id, teammate, team, etc.)
+            ...(extraMetadata || {}),
         };
 
         if (sessionId) metadata.sessionId = sessionId;

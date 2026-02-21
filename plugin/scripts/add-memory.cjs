@@ -16093,14 +16093,17 @@ Preserve the content as-is with minimal processing.`;
           captureMode,
           memoryType,
           sourceVersion,
-          extractionContext
+          extractionContext,
+          metadata: extraMetadata
         } = opts;
         const metadata = {
           source: "claude-code-plugin",
           source_version: sourceVersion || "0.2.0",
           project: this.projectName,
           timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-          scope_id: scope === "project" ? this.getProjectScopeId() : this.getPersonalScopeId()
+          scope_id: scope === "project" ? this.getProjectScopeId() : this.getPersonalScopeId(),
+          // Merge extra metadata (agent_id, agent_type, task_id, teammate, team, etc.)
+          ...extraMetadata || {}
         };
         if (sessionId) metadata.sessionId = sessionId;
         if (captureMode) metadata.captureMode = captureMode;
