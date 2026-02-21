@@ -16045,11 +16045,14 @@ Preserve the content as-is with minimal processing.`;
         if (!apiKey) {
           throw new Error("API key is required");
         }
+        const baseUrl = options.baseUrl || DEFAULT_BASE_URL;
         this.client = new MemoryStackClient({
           apiKey,
-          baseUrl: options.baseUrl || DEFAULT_BASE_URL,
+          baseUrl,
           enableLogging: options.debug || false
         });
+        this.apiKey = apiKey;
+        this.baseUrl = baseUrl.endsWith("/api/v1") ? baseUrl : `${baseUrl}/api/v1`;
         this.projectName = options.projectName || "claude-code";
         this.cwd = options.cwd || process.cwd();
         this.debug = options.debug || false;
@@ -16118,6 +16121,7 @@ Preserve the content as-is with minimal processing.`;
       }
       /**
        * Search memories with scope filtering
+       * Uses direct HTTP call to pass metadata filters (SDK search() drops them)
        * @param {string} query - Search query
        * @param {object} opts - Options: limit, scope, mode
        */
@@ -16127,17 +16131,31 @@ Preserve the content as-is with minimal processing.`;
           scope = "both",
           mode
         } = typeof opts === "number" ? { limit: opts } : opts;
-        const searchOpts = { limit };
-        if (mode) searchOpts.mode = mode;
+        const url = new URL(`${this.baseUrl}/memories/search`);
+        url.searchParams.set("query", query);
+        url.searchParams.set("limit", String(limit));
+        url.searchParams.set("mode", mode || "hybrid");
         if (scope === "personal") {
-          searchOpts.metadata = { scope_id: this.getPersonalScopeId() };
+          url.searchParams.set("metadata", JSON.stringify({ scope_id: this.getPersonalScopeId() }));
         } else if (scope === "project") {
-          searchOpts.metadata = { scope_id: this.getProjectScopeId() };
+          url.searchParams.set("metadata", JSON.stringify({ scope_id: this.getProjectScopeId() }));
         }
-        const results = await this.client.search(query, searchOpts);
+        const response = await fetch(url.toString(), {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${this.apiKey}`,
+            "X-API-Key": this.apiKey,
+            "Content-Type": "application/json"
+          }
+        });
+        if (!response.ok) {
+          const errorBody = await response.text();
+          throw new Error(`Search failed (${response.status}): ${errorBody}`);
+        }
+        const data = await response.json();
         return {
-          count: results.count,
-          results: (results.results || []).map((m) => ({
+          count: data.count,
+          results: (data.results || []).map((m) => ({
             id: m.id,
             content: m.content,
             memoryType: m.memory_type,
