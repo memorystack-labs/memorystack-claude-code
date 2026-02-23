@@ -7,6 +7,13 @@ const SETTINGS_FILE = path.join(CONFIG_DIR, 'settings.json');
 const CREDENTIALS_FILE = path.join(CONFIG_DIR, 'credentials.json');
 
 /**
+ * Strip UTF-8 BOM — PowerShell on Windows adds this
+ */
+function stripBom(str) {
+    return str.replace(/^\uFEFF/, '');
+}
+
+/**
  * Load settings from config file
  */
 function loadSettings() {
@@ -30,7 +37,7 @@ function loadSettings() {
 
     try {
         if (fs.existsSync(SETTINGS_FILE)) {
-            const content = fs.readFileSync(SETTINGS_FILE, 'utf8');
+            const content = stripBom(fs.readFileSync(SETTINGS_FILE, 'utf8'));
             return { ...defaults, ...JSON.parse(content) };
         }
     } catch (err) {
@@ -53,7 +60,7 @@ function getApiKey(settings) {
     // 2. Check credentials file
     try {
         if (fs.existsSync(CREDENTIALS_FILE)) {
-            const content = fs.readFileSync(CREDENTIALS_FILE, 'utf8');
+            const content = stripBom(fs.readFileSync(CREDENTIALS_FILE, 'utf8'));
             const creds = JSON.parse(content);
             if (creds.apiKey) {
                 return creds.apiKey;

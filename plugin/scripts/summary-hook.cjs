@@ -16272,6 +16272,9 @@ var require_settings = __commonJS({
     var CONFIG_DIR = path.join(os.homedir(), ".memorystack-claude");
     var SETTINGS_FILE = path.join(CONFIG_DIR, "settings.json");
     var CREDENTIALS_FILE = path.join(CONFIG_DIR, "credentials.json");
+    function stripBom(str) {
+      return str.replace(/^\uFEFF/, "");
+    }
     function loadSettings2() {
       const defaults = {
         skipTools: ["Read", "Glob", "Grep"],
@@ -16304,7 +16307,7 @@ var require_settings = __commonJS({
       };
       try {
         if (fs2.existsSync(SETTINGS_FILE)) {
-          const content = fs2.readFileSync(SETTINGS_FILE, "utf8");
+          const content = stripBom(fs2.readFileSync(SETTINGS_FILE, "utf8"));
           return { ...defaults, ...JSON.parse(content) };
         }
       } catch (err) {
@@ -16318,7 +16321,7 @@ var require_settings = __commonJS({
       }
       try {
         if (fs2.existsSync(CREDENTIALS_FILE)) {
-          const content = fs2.readFileSync(CREDENTIALS_FILE, "utf8");
+          const content = stripBom(fs2.readFileSync(CREDENTIALS_FILE, "utf8"));
           const creds = JSON.parse(content);
           if (creds.apiKey) {
             return creds.apiKey;
@@ -16776,6 +16779,15 @@ var require_transcript_formatter = __commonJS({
       }
       return null;
     }
+    function formatSessionSummary2(transcriptContent, options = {}) {
+      const entries = parseTranscript(transcriptContent);
+      if (entries.length === 0) return null;
+      const turns = groupIntoTurns(entries);
+      if (turns.length === 0) return null;
+      const formatted = turns.map((t) => formatTurn(t, options)).filter((f) => f.length > 20).join("\n---\n");
+      if (!formatted || formatted.length < 50) return null;
+      return formatted.slice(0, 4e3);
+    }
     module2.exports = {
       parseTranscript,
       groupIntoTurns,
@@ -16785,6 +16797,7 @@ var require_transcript_formatter = __commonJS({
       formatNewEntries,
       formatSignalEntries,
       formatTranscriptSmart: formatTranscriptSmart2,
+      formatSessionSummary: formatSessionSummary2,
       getLastCapturedIndex,
       setLastCapturedIndex,
       DEFAULT_SIGNAL_KEYWORDS
@@ -16797,7 +16810,7 @@ var fs = require("fs");
 var { MemoryStackClientWrapper } = require_memorystack_client();
 var { loadSettings, getApiKey, debugLog, getProjectName } = require_settings();
 var { readStdin, writeOutput } = require_stdin();
-var { formatTranscriptSmart } = require_transcript_formatter();
+var { formatTranscriptSmart, formatSessionSummary } = require_transcript_formatter();
 async function main() {
   const settings = loadSettings();
   try {
@@ -16817,6 +16830,7 @@ async function main() {
     try {
       apiKey = getApiKey(settings);
     } catch {
+      debugLog(settings, "API key not found");
       writeOutput({ continue: true });
       return;
     }
@@ -16834,33 +16848,51 @@ async function main() {
       return;
     }
     const projectName = getProjectName(cwd);
-    const result = formatTranscriptSmart(transcriptContent, projectName, {
+    let content = null;
+    let mode = "unknown";
+    const smartResult = formatTranscriptSmart(transcriptContent, projectName, {
       signalKeywords: settings.signalKeywords,
       turnsBefore: settings.turnsBefore,
       captureTools: settings.captureTools
     });
-    if (!result) {
+    if (smartResult) {
+      content = smartResult.content;
+      mode = smartResult.mode;
+    } else {
+      const sessionSummary = formatSessionSummary(transcriptContent, {
+        captureTools: settings.captureTools
+      });
+      if (sessionSummary) {
+        content = sessionSummary;
+        mode = "session";
+      } else if (lastAssistantMessage && lastAssistantMessage.length > 50) {
+        content = `[Session Summary]
+${lastAssistantMessage.slice(0, 4e3)}`;
+        mode = "last_message";
+      }
+    }
+    if (!content) {
       debugLog(settings, "No meaningful content to save");
       writeOutput({ continue: true });
       return;
     }
     debugLog(settings, "Transcript formatted", {
-      mode: result.mode,
-      length: result.content.length
+      mode,
+      length: content.length
     });
     const client = new MemoryStackClientWrapper(apiKey, {
       projectName,
       debug: settings.debug
     });
-    await client.addMemory(result.content, {
+    await client.addMemory(content, {
       type: "session_turn",
       sessionId,
-      captureMode: result.mode,
-      memoryType: result.mode === "signal" ? "knowledge" : "episodic"
+      captureMode: mode,
+      memoryType: mode === "signal" ? "knowledge" : "episodic"
     });
     debugLog(settings, "Session saved", {
-      mode: result.mode,
-      length: result.content.length
+      mode,
+      length: content.length
     });
     writeOutput({ continue: true });
   } catch (err) {

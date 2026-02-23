@@ -16272,6 +16272,9 @@ var require_settings = __commonJS({
     var CONFIG_DIR = path.join(os.homedir(), ".memorystack-claude");
     var SETTINGS_FILE = path.join(CONFIG_DIR, "settings.json");
     var CREDENTIALS_FILE = path.join(CONFIG_DIR, "credentials.json");
+    function stripBom(str) {
+      return str.replace(/^\uFEFF/, "");
+    }
     function loadSettings2() {
       const defaults = {
         skipTools: ["Read", "Glob", "Grep"],
@@ -16304,7 +16307,7 @@ var require_settings = __commonJS({
       };
       try {
         if (fs.existsSync(SETTINGS_FILE)) {
-          const content = fs.readFileSync(SETTINGS_FILE, "utf8");
+          const content = stripBom(fs.readFileSync(SETTINGS_FILE, "utf8"));
           return { ...defaults, ...JSON.parse(content) };
         }
       } catch (err) {
@@ -16318,7 +16321,7 @@ var require_settings = __commonJS({
       }
       try {
         if (fs.existsSync(CREDENTIALS_FILE)) {
-          const content = fs.readFileSync(CREDENTIALS_FILE, "utf8");
+          const content = stripBom(fs.readFileSync(CREDENTIALS_FILE, "utf8"));
           const creds = JSON.parse(content);
           if (creds.apiKey) {
             return creds.apiKey;

@@ -2,7 +2,7 @@ const fs = require('fs');
 const { MemoryStackClientWrapper } = require('./lib/memorystack-client');
 const { loadSettings, getApiKey, debugLog, getProjectName } = require('./lib/settings');
 const { readStdin, writeOutput } = require('./lib/stdin');
-const { formatTranscriptSmart } = require('./lib/transcript-formatter');
+const { formatTranscriptSmart, formatSessionSummary } = require('./lib/transcript-formatter');
 
 async function main() {
     const settings = loadSettings();
@@ -27,6 +27,7 @@ async function main() {
         try {
             apiKey = getApiKey(settings);
         } catch {
+            debugLog(settings, 'API key not found');
             writeOutput({ continue: true });
             return;
         }
@@ -48,22 +49,43 @@ async function main() {
 
         const projectName = getProjectName(cwd);
 
-        // Use smart transcript formatter (signal extraction → full capture fallback)
-        const result = formatTranscriptSmart(transcriptContent, projectName, {
+        // Try smart formatter first (signal → incremental full)
+        let content = null;
+        let mode = 'unknown';
+
+        const smartResult = formatTranscriptSmart(transcriptContent, projectName, {
             signalKeywords: settings.signalKeywords,
             turnsBefore: settings.turnsBefore,
             captureTools: settings.captureTools,
         });
 
-        if (!result) {
+        if (smartResult) {
+            content = smartResult.content;
+            mode = smartResult.mode;
+        } else {
+            // Fallback: full session summary (ignores lastCapturedIndex)
+            const sessionSummary = formatSessionSummary(transcriptContent, {
+                captureTools: settings.captureTools,
+            });
+            if (sessionSummary) {
+                content = sessionSummary;
+                mode = 'session';
+            } else if (lastAssistantMessage && lastAssistantMessage.length > 50) {
+                // Final fallback: use Claude Code's last assistant message
+                content = `[Session Summary]\n${lastAssistantMessage.slice(0, 4000)}`;
+                mode = 'last_message';
+            }
+        }
+
+        if (!content) {
             debugLog(settings, 'No meaningful content to save');
             writeOutput({ continue: true });
             return;
         }
 
         debugLog(settings, 'Transcript formatted', {
-            mode: result.mode,
-            length: result.content.length,
+            mode,
+            length: content.length,
         });
 
         const client = new MemoryStackClientWrapper(apiKey, {
@@ -71,16 +93,16 @@ async function main() {
             debug: settings.debug,
         });
 
-        await client.addMemory(result.content, {
+        await client.addMemory(content, {
             type: 'session_turn',
             sessionId,
-            captureMode: result.mode,
-            memoryType: result.mode === 'signal' ? 'knowledge' : 'episodic',
+            captureMode: mode,
+            memoryType: mode === 'signal' ? 'knowledge' : 'episodic',
         });
 
         debugLog(settings, 'Session saved', {
-            mode: result.mode,
-            length: result.content.length,
+            mode,
+            length: content.length,
         });
 
         writeOutput({ continue: true });
@@ -95,3 +117,4 @@ main().catch((err) => {
     console.error(`MemoryStack fatal: ${err.message}`);
     process.exit(1);
 });
+

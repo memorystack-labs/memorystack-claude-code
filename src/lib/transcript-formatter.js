@@ -358,6 +358,27 @@ function formatTranscriptSmart(transcriptContent, projectKey, options = {}) {
     return null;
 }
 
+/**
+ * Format a session summary from ALL turns (ignores lastCapturedIndex).
+ * Use this for Stop/SessionEnd hooks where we want a full session summary.
+ */
+function formatSessionSummary(transcriptContent, options = {}) {
+    const entries = parseTranscript(transcriptContent);
+    if (entries.length === 0) return null;
+
+    const turns = groupIntoTurns(entries);
+    if (turns.length === 0) return null;
+
+    const formatted = turns
+        .map(t => formatTurn(t, options))
+        .filter(f => f.length > 20)
+        .join('\n---\n');
+
+    if (!formatted || formatted.length < 50) return null;
+
+    return formatted.slice(0, 4000); // Cap total size
+}
+
 module.exports = {
     parseTranscript,
     groupIntoTurns,
@@ -367,6 +388,7 @@ module.exports = {
     formatNewEntries,
     formatSignalEntries,
     formatTranscriptSmart,
+    formatSessionSummary,
     getLastCapturedIndex,
     setLastCapturedIndex,
     DEFAULT_SIGNAL_KEYWORDS,
