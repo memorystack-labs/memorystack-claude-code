@@ -12,8 +12,10 @@ async function main() {
         const cwd = input.cwd || process.cwd();
         const sessionId = input.session_id;
         const transcriptPath = input.transcript_path;
+        const hookEvent = input.hook_event_name || 'Stop';
+        const lastAssistantMessage = input.last_assistant_message || '';
 
-        debugLog(settings, 'Stop', { sessionId, transcriptPath });
+        debugLog(settings, hookEvent, { sessionId, transcriptPath, hookEvent });
 
         if (!transcriptPath || !sessionId) {
             debugLog(settings, 'Missing transcript path or session id');

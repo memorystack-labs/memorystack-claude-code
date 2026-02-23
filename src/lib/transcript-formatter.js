@@ -59,7 +59,8 @@ function setLastCapturedIndex(projectKey, index) {
 
 /**
  * Parse raw transcript content into structured entries
- * Claude Code transcripts are JSONL with role-based messages
+ * Claude Code transcripts are JSONL with nested message objects.
+ * Format: { type: 'assistant', message: { role: 'assistant', content: [...] } }
  */
 function parseTranscript(content) {
     if (!content || typeof content !== 'string') return [];
@@ -69,16 +70,28 @@ function parseTranscript(content) {
 
     for (let i = 0; i < lines.length; i++) {
         try {
-            const entry = JSON.parse(lines[i]);
-            entries.push({
-                index: i,
-                ...entry,
-            });
+            const raw = JSON.parse(lines[i]);
+            // Normalize: flatten entry.message into top-level role/content
+            const entry = { index: i, _raw: raw };
+
+            if (raw.message && raw.message.role) {
+                // Real Claude Code format
+                entry.role = raw.message.role;
+                entry.content = raw.message.content;
+            } else {
+                // Legacy / test format
+                entry.role = raw.role || raw.type || 'unknown';
+                entry.content = raw.content;
+            }
+
+            entry.type = raw.type;
+            entries.push(entry);
         } catch {
             // Not JSON — treat as plain text line
             entries.push({
                 index: i,
                 type: 'text',
+                role: 'text',
                 content: lines[i],
             });
         }
@@ -104,7 +117,8 @@ function groupIntoTurns(entries) {
     let currentTurn = null;
 
     for (const entry of entries) {
-        const role = entry.role || entry.type || 'unknown';
+        // entry.role is already normalized by parseTranscript
+        const role = entry.role || 'unknown';
 
         if (role === 'user' || role === 'human') {
             // Start a new turn
@@ -126,7 +140,7 @@ function groupIntoTurns(entries) {
                 currentTurn.tools.push({
                     name: entry.name || entry.tool_name || 'unknown',
                     input: entry.input || entry.tool_input || {},
-                    output: truncateOutput(entry.output || entry.content || ''),
+                    output: truncateOutput(entry.output || extractContent(entry) || ''),
                 });
                 currentTurn.endIndex = entry.index;
             }

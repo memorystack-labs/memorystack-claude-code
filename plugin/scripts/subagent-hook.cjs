@@ -16445,7 +16445,8 @@ async function main() {
       writeOutput({});
       return;
     }
-    const summary = buildSubagentSummary(agentType, agentId, transcript);
+    const lastAssistantMessage = input.last_assistant_message || "";
+    const summary = buildSubagentSummary(agentType, agentId, transcript, lastAssistantMessage);
     if (!summary) {
       writeOutput({});
       return;
@@ -16487,9 +16488,24 @@ function readSubagentTranscript(transcriptPath) {
     return null;
   }
 }
-function buildSubagentSummary(agentType, agentId, entries) {
+function normalizeEntry(entry) {
+  if (entry.message && entry.message.role) {
+    return {
+      role: entry.message.role,
+      content: entry.message.content,
+      type: entry.type
+    };
+  }
+  return {
+    role: entry.role || entry.type || "unknown",
+    content: entry.content,
+    type: entry.type
+  };
+}
+function buildSubagentSummary(agentType, agentId, entries, lastAssistantMessage) {
   const parts = [`[Subagent:${agentType}]`];
-  const assistantMessages = entries.filter((e) => e.role === "assistant" && e.content).map((e) => {
+  const normalized = entries.map(normalizeEntry);
+  const assistantMessages = normalized.filter((e) => e.role === "assistant" && e.content).map((e) => {
     if (typeof e.content === "string") return e.content;
     if (Array.isArray(e.content)) {
       return e.content.filter((c) => c.type === "text").map((c) => c.text).join(" ");
@@ -16497,9 +16513,9 @@ function buildSubagentSummary(agentType, agentId, entries) {
     return "";
   }).filter(Boolean);
   const filesExplored = /* @__PURE__ */ new Set();
-  const toolUses = entries.filter((e) => e.role === "assistant" && Array.isArray(e.content)).flatMap((e) => e.content.filter((c) => c.type === "tool_use"));
+  const toolUses = normalized.filter((e) => e.role === "assistant" && Array.isArray(e.content)).flatMap((e) => e.content.filter((c) => c.type === "tool_use"));
   for (const t of toolUses) {
-    const file = t.input?.file_path || t.input?.path || "";
+    const file = t.input?.file_path || t.input?.path || t.input?.file || "";
     if (file) filesExplored.add(path.basename(file));
   }
   const allText = assistantMessages.join(" ");
@@ -16508,11 +16524,11 @@ function buildSubagentSummary(agentType, agentId, entries) {
   const sentences = allText.split(/[.!?\n]+/).map((s) => s.trim()).filter((s) => s.length > 20);
   for (const sentence of sentences) {
     const lower = sentence.toLowerCase();
-    if (lower.includes("architecture") || lower.includes("pattern") || lower.includes("depends on") || lower.includes("imports from") || lower.includes("entry point") || lower.includes("main ") || lower.includes("core ") || lower.includes("critical")) {
-      findings.push(sentence.slice(0, 150));
+    if (lower.includes("architecture") || lower.includes("pattern") || lower.includes("depends on") || lower.includes("imports from") || lower.includes("entry point") || lower.includes("main ") || lower.includes("core ") || lower.includes("critical") || lower.includes("config") || lower.includes("structure") || lower.includes("tech stack") || lower.includes("uses ")) {
+      findings.push(sentence.slice(0, 200));
     }
     if (lower.includes("warning") || lower.includes("issue") || lower.includes("problem") || lower.includes("deprecated") || lower.includes("tech debt") || lower.includes("todo") || lower.includes("broken") || lower.includes("missing")) {
-      warnings.push(sentence.slice(0, 150));
+      warnings.push(sentence.slice(0, 200));
     }
   }
   if (findings.length > 0) {
@@ -16524,9 +16540,11 @@ function buildSubagentSummary(agentType, agentId, entries) {
   if (warnings.length > 0) {
     parts.push(`\u26A0\uFE0F Noted: ${warnings.slice(0, 3).join("; ")}`);
   }
-  if (assistantMessages.length > 0) {
+  if (lastAssistantMessage) {
+    parts.push(`Conclusion: ${lastAssistantMessage.slice(0, 600)}`);
+  } else if (assistantMessages.length > 0) {
     const lastMsg = assistantMessages[assistantMessages.length - 1];
-    parts.push(`Conclusion: ${lastMsg.slice(0, 400)}`);
+    parts.push(`Conclusion: ${lastMsg.slice(0, 600)}`);
   }
   const summary = parts.join("\n");
   return summary.length > MAX_SUMMARY_LENGTH ? summary.slice(0, MAX_SUMMARY_LENGTH) + "..." : summary;

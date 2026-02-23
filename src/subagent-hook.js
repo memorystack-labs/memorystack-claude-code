@@ -57,8 +57,11 @@ async function main() {
             return;
         }
 
+        // Also grab last_assistant_message from input (Claude Code provides it)
+        const lastAssistantMessage = input.last_assistant_message || '';
+
         // Build a focused summary of what the subagent did
-        const summary = buildSubagentSummary(agentType, agentId, transcript);
+        const summary = buildSubagentSummary(agentType, agentId, transcript, lastAssistantMessage);
         if (!summary) {
             writeOutput({});
             return;
@@ -114,14 +117,39 @@ function readSubagentTranscript(transcriptPath) {
 }
 
 /**
+ * Normalize a JSONL entry to a flat { role, content } shape.
+ * Claude Code transcripts use: { type: 'assistant', message: { role, content } }
+ * Our test fixtures use:       { role: 'assistant', content: ... }
+ */
+function normalizeEntry(entry) {
+    // Real Claude Code format: entry.message.role / entry.message.content
+    if (entry.message && entry.message.role) {
+        return {
+            role: entry.message.role,
+            content: entry.message.content,
+            type: entry.type,
+        };
+    }
+    // Test/legacy format: entry.role / entry.content
+    return {
+        role: entry.role || entry.type || 'unknown',
+        content: entry.content,
+        type: entry.type,
+    };
+}
+
+/**
  * Build a rich summary of what the subagent discovered
  * Extracts: key findings, architecture insights, file importance, warnings
  */
-function buildSubagentSummary(agentType, agentId, entries) {
+function buildSubagentSummary(agentType, agentId, entries, lastAssistantMessage) {
     const parts = [`[Subagent:${agentType}]`];
 
+    // Normalize all entries to flat { role, content } shape
+    const normalized = entries.map(normalizeEntry);
+
     // Extract assistant messages (the subagent's analysis)
-    const assistantMessages = entries
+    const assistantMessages = normalized
         .filter(e => e.role === 'assistant' && e.content)
         .map(e => {
             if (typeof e.content === 'string') return e.content;
@@ -135,14 +163,14 @@ function buildSubagentSummary(agentType, agentId, entries) {
         })
         .filter(Boolean);
 
-    // Extract files explored (for file importance map)
+    // Extract files explored (from tool_use blocks)
     const filesExplored = new Set();
-    const toolUses = entries
+    const toolUses = normalized
         .filter(e => e.role === 'assistant' && Array.isArray(e.content))
         .flatMap(e => e.content.filter(c => c.type === 'tool_use'));
 
     for (const t of toolUses) {
-        const file = t.input?.file_path || t.input?.path || '';
+        const file = t.input?.file_path || t.input?.path || t.input?.file || '';
         if (file) filesExplored.add(path.basename(file));
     }
 
@@ -159,9 +187,11 @@ function buildSubagentSummary(agentType, agentId, entries) {
             lower.includes('architecture') || lower.includes('pattern') ||
             lower.includes('depends on') || lower.includes('imports from') ||
             lower.includes('entry point') || lower.includes('main ') ||
-            lower.includes('core ') || lower.includes('critical')
+            lower.includes('core ') || lower.includes('critical') ||
+            lower.includes('config') || lower.includes('structure') ||
+            lower.includes('tech stack') || lower.includes('uses ')
         ) {
-            findings.push(sentence.slice(0, 150));
+            findings.push(sentence.slice(0, 200));
         }
         if (
             lower.includes('warning') || lower.includes('issue') ||
@@ -169,7 +199,7 @@ function buildSubagentSummary(agentType, agentId, entries) {
             lower.includes('tech debt') || lower.includes('todo') ||
             lower.includes('broken') || lower.includes('missing')
         ) {
-            warnings.push(sentence.slice(0, 150));
+            warnings.push(sentence.slice(0, 200));
         }
     }
 
@@ -188,10 +218,12 @@ function buildSubagentSummary(agentType, agentId, entries) {
         parts.push(`⚠️ Noted: ${warnings.slice(0, 3).join('; ')}`);
     }
 
-    // Final conclusion (last assistant message)
-    if (assistantMessages.length > 0) {
+    // Final conclusion — prefer last_assistant_message from Claude Code input
+    if (lastAssistantMessage) {
+        parts.push(`Conclusion: ${lastAssistantMessage.slice(0, 600)}`);
+    } else if (assistantMessages.length > 0) {
         const lastMsg = assistantMessages[assistantMessages.length - 1];
-        parts.push(`Conclusion: ${lastMsg.slice(0, 400)}`);
+        parts.push(`Conclusion: ${lastMsg.slice(0, 600)}`);
     }
 
     const summary = parts.join('\n');
