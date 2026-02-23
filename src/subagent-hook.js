@@ -35,8 +35,10 @@ async function main() {
 
         debugLog(settings, 'SubagentStop', { agentId, agentType, agentTranscriptPath });
 
-        // Skip if no transcript path
-        if (!agentTranscriptPath) {
+        // Skip internal Claude Code fork agents (prompt_suggestion, etc.)
+        // These trigger SubagentStop but are not real subagents
+        if (!agentId || !agentTranscriptPath) {
+            debugLog(settings, 'Skipping: no agent ID or transcript path', { agentId, agentType });
             writeOutput({});
             return;
         }

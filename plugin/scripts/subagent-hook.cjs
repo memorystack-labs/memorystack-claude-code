@@ -16431,7 +16431,8 @@ async function main() {
     const cwd = input.cwd || process.cwd();
     const projectName = getProjectName(cwd);
     debugLog(settings, "SubagentStop", { agentId, agentType, agentTranscriptPath });
-    if (!agentTranscriptPath) {
+    if (!agentId || !agentTranscriptPath) {
+      debugLog(settings, "Skipping: no agent ID or transcript path", { agentId, agentType });
       writeOutput({});
       return;
     }
