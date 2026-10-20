@@ -97,6 +97,16 @@ function saveApiKey(apiKey) {
  */
 function debugLog(settings, message, data) {
     if (settings.debug) {
+        const timestamp = new Date().toISOString();
+        const logEntry = `[${timestamp}] [MemoryStack Debug] ${message} ${data ? JSON.stringify(data) : ''}\n`;
+        try {
+            if (!fs.existsSync(CONFIG_DIR)) {
+                fs.mkdirSync(CONFIG_DIR, { recursive: true });
+            }
+            fs.appendFileSync(path.join(CONFIG_DIR, 'debug.log'), logEntry);
+        } catch (err) {
+            console.error('Failed to write to debug log:', err.message);
+        }
         console.error(`[MemoryStack Debug] ${message}`, data || '');
     }
 }

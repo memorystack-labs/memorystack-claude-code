@@ -1,22 +1,22 @@
 {
-    "name": "memorystack-claude-code",
-    "version": "0.1.0",
-    "description": "Persistent cognitive memory for Claude Code — powered by MemoryStack",
-    "private": true,
-    "engines": {
-        "node": ">=18.0.0"
-    },
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/memorystack-labs/memorystack-claude-code"
-    },
-    "keywords": [
-        "claude-code",
-        "plugin",
-        "memorystack",
-        "memory",
-        "ai"
-    ],
-    "author": "MemoryStack",
-    "license": "MIT"
+  "name": "memorystack-claude-code",
+  "version": "0.3.0",
+  "description": "Persistent cognitive memory for Claude Code — powered by MemoryStack",
+  "private": true,
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/memorystack-labs/memorystack-claude-code"
+  },
+  "keywords": [
+    "claude-code",
+    "plugin",
+    "memorystack",
+    "memory",
+    "ai"
+  ],
+  "author": "MemoryStack",
+  "license": "MIT"
 }

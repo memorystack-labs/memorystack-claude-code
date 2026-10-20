@@ -1,0 +1,22 @@
+{
+  "source": "memorystack-plugin/server",
+  "version": "0.5.0",
+  "snapshot": "2026-10-20",
+  "sha256": {
+    "active-context.js": "d0efda97958dc0a801918b50f07ce9f4377c38d64c21b69934056d13d702e94c",
+    "context-delivery.js": "c5f0a69f1793567d6a7b2a3bb85b7e06bd5f7a381cfa370bbfff23a69f723f89",
+    "control-plane.js": "7ea6822784bac86255d9ae2ff39adb04e733ca24af493ba0a9afc437cd741156",
+    "index.js": "33e32b6f24871295f8acdf3049bfa262fc6f711bb18ea08c43206cb3c38f5cee",
+    "memory-evaluation.js": "68a6a26aefeb73eb61dfbbb04f571604a7aef8209d8d4c4abfc092041ecb12d0",
+    "procedural-skills.js": "cbfc6d44ee739352a42c272692106d8287ddd12cd7f511a7d11e3f7748f8a1ee",
+    "provenance.js": "839772ffa4a9d582cba3bbd4a7979eea784c5ef7010940215548615c47836182",
+    "retrieval-budget.js": "5cd548daf7711c150dcf437ce8256a9b3d3c2adab3357782eaf44cc51d3daaa4",
+    "scope-policy.js": "be104b3ab9197d35de95c766d3ae695dd4383cd8c67281f537bad2a8f182e7b7",
+    "session-auth.js": "ae70ab947bd591d9a072557bce0e6c333edd69ba83b8e70b73294123a753a77b",
+    "source-freshness.js": "ad24389123b4dd0987b45f1ca4ea4a72ac0e514b60c412186d2cb881185b86a7",
+    "task-context.js": "0c98102af906bb711b64c1b4e731786a9e186d0494757772b644eaa0b730710b"
+  },
+  "adapted_files": [
+    "index.js"
+  ]
+}

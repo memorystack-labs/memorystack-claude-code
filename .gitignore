@@ -21,3 +21,6 @@ dist/
 
 # Gemini/Agent state
 .gemini/
+
+# Disposable integration fixtures and provider test output
+scratch/

@@ -218,6 +218,17 @@ var require_settings = __commonJS({
     }
     function debugLog2(settings, message, data) {
       if (settings.debug) {
+        const timestamp = (/* @__PURE__ */ new Date()).toISOString();
+        const logEntry = `[${timestamp}] [MemoryStack Debug] ${message} ${data ? JSON.stringify(data) : ""}
+`;
+        try {
+          if (!fs2.existsSync(CONFIG_DIR)) {
+            fs2.mkdirSync(CONFIG_DIR, { recursive: true });
+          }
+          fs2.appendFileSync(path2.join(CONFIG_DIR, "debug.log"), logEntry);
+        } catch (err) {
+          console.error("Failed to write to debug log:", err.message);
+        }
         console.error(`[MemoryStack Debug] ${message}`, data || "");
       }
     }
@@ -250,29 +261,35 @@ var require_stdin = __commonJS({
   "src/lib/stdin.js"(exports2, module2) {
     async function readStdin2() {
       return new Promise((resolve, reject) => {
-        let data = "";
-        process.stdin.setEncoding("utf8");
-        process.stdin.on("data", (chunk) => {
+        let data = "", finished = false;
+        const timer = setTimeout(() => finish(null, {}), 1500);
+        timer.unref();
+        const finish = (error, value) => {
+          if (finished) return;
+          finished = true;
+          clearTimeout(timer);
+          process.stdin.removeListener("data", onData);
+          process.stdin.removeListener("end", onEnd);
+          process.stdin.removeListener("error", onError);
+          process.stdin.pause();
+          error ? reject(error) : resolve(value);
+        };
+        const onData = (chunk) => {
           data += chunk;
-        });
-        process.stdin.on("end", () => {
+          if (Buffer.byteLength(data) > 1048576) finish(new Error("Hook input exceeds 1 MiB"));
+        };
+        const onEnd = () => {
           try {
-            const cleaned = data.replace(/^\uFEFF/, "").trim();
-            if (!cleaned) {
-              resolve({});
-              return;
-            }
-            resolve(JSON.parse(cleaned));
-          } catch (err) {
-            reject(new Error(`Failed to parse stdin: ${err.message}`));
+            finish(null, JSON.parse(data.replace(/^\uFEFF/, "").trim() || "{}"));
+          } catch {
+            finish(new Error("Invalid hook JSON"));
           }
-        });
-        process.stdin.on("error", reject);
-        setTimeout(() => {
-          if (!data) {
-            resolve({});
-          }
-        }, 5e3);
+        };
+        const onError = (error) => finish(error);
+        process.stdin.setEncoding("utf8");
+        process.stdin.on("data", onData);
+        process.stdin.on("end", onEnd);
+        process.stdin.on("error", onError);
       });
     }
     function writeOutput2(output) {

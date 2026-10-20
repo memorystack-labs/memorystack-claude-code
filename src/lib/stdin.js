@@ -1,45 +1,32 @@
-/**
- * Read JSON from stdin (Claude Code hook protocol)
- */
+/** Bounded, fail-open Claude Code command-hook protocol. */
 async function readStdin() {
-    return new Promise((resolve, reject) => {
-        let data = '';
-
-        process.stdin.setEncoding('utf8');
-        process.stdin.on('data', (chunk) => {
-            data += chunk;
-        });
-
-        process.stdin.on('end', () => {
-            try {
-                // Strip UTF-8 BOM (PowerShell on Windows adds this)
-                const cleaned = data.replace(/^\uFEFF/, '').trim();
-                if (!cleaned) {
-                    resolve({});
-                    return;
-                }
-                resolve(JSON.parse(cleaned));
-            } catch (err) {
-                reject(new Error(`Failed to parse stdin: ${err.message}`));
-            }
-        });
-
-        process.stdin.on('error', reject);
-
-        // Timeout after 5 seconds
-        setTimeout(() => {
-            if (!data) {
-                resolve({});
-            }
-        }, 5000);
-    });
+  return new Promise((resolve, reject) => {
+    let data = '', finished = false;
+    const timer = setTimeout(() => finish(null, {}), 1500);
+    timer.unref();
+    const finish = (error, value) => {
+      if (finished) return;
+      finished = true; clearTimeout(timer);
+      process.stdin.removeListener('data', onData);
+      process.stdin.removeListener('end', onEnd);
+      process.stdin.removeListener('error', onError);
+      process.stdin.pause();
+      error ? reject(error) : resolve(value);
+    };
+    const onData = chunk => {
+      data += chunk;
+      if (Buffer.byteLength(data) > 1048576) finish(new Error('Hook input exceeds 1 MiB'));
+    };
+    const onEnd = () => {
+      try { finish(null, JSON.parse(data.replace(/^\uFEFF/, '').trim() || '{}')); }
+      catch { finish(new Error('Invalid hook JSON')); }
+    };
+    const onError = error => finish(error);
+    process.stdin.setEncoding('utf8');
+    process.stdin.on('data', onData);
+    process.stdin.on('end', onEnd);
+    process.stdin.on('error', onError);
+  });
 }
-
-/**
- * Write JSON output to stdout
- */
-function writeOutput(output) {
-    console.log(JSON.stringify(output));
-}
-
+function writeOutput(output) { console.log(JSON.stringify(output)); }
 module.exports = { readStdin, writeOutput };

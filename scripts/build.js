@@ -12,6 +12,7 @@ if (!fs.existsSync(outDir)) {
 
 // Files to bundle
 const entryPoints = [
+    'lifecycle-hook.js',
     'context-hook.js',
     'summary-hook.js',
     'prompt-hook.js',
@@ -54,6 +55,12 @@ async function build() {
         }
     }
 
+    await esbuild.build({
+        entryPoints: [path.join(srcDir, 'memory-server.mjs')], bundle: true,
+        platform: 'node', target: 'node18', format: 'esm',
+        outfile: path.join(outDir, 'memory-server.mjs'),
+        banner: { js: 'import { createRequire as __createRequire } from "node:module"; const require = __createRequire(import.meta.url);' },
+    });
     console.log('Build complete!');
 }
 
