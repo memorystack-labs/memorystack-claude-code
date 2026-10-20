@@ -25,7 +25,7 @@ async function main() {
     const projectName = getProjectName(cwd);
 
     try {
-        const client = new MemoryStackClientWrapper(apiKey, { projectName });
+        const client = new MemoryStackClientWrapper(apiKey, { projectName, cwd });
         const result = await client.addMemory(content, { type: 'manual', extractionContext: MANUAL_ENTITY_CONTEXT });
 
         console.log(`Memory saved to project: ${projectName}`);

@@ -90,6 +90,7 @@ async function main() {
 
         const client = new MemoryStackClientWrapper(apiKey, {
             projectName,
+            cwd,
             debug: settings.debug,
         });
 
